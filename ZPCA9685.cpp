@@ -140,7 +140,7 @@ ZPCA9685::ZPCA9685() : PinExtender()
 
   void ZPCA9685::begin(void)
   {
-	  begin(&Wire, 0x40);
+	  begin( 0x40);
   }
   
 
