@@ -1,4 +1,7 @@
-/*************************************************** 
+/** Arduino library for PWM and servo driver.
+*/
+
+/* ************************************************** 
   This is a library for our Adafruit 16-channel PWM & Servo driver
 
   Pick one up today in the adafruit shop!
@@ -76,7 +79,7 @@
 static inline uint32_t mapResolution(uint32_t value, uint32_t from, uint32_t to)
 {
   if (from == to) {
-    if( value>=(1<<to))
+    if( value>=(uint32_t)(1<<to))
       value=(1<<to)-1;
     return value;
   }
@@ -87,7 +90,7 @@ static inline uint32_t mapResolution(uint32_t value, uint32_t from, uint32_t to)
 }
 bool ZPCA9685::check()
   {
-  return (_i2caddr&~0x3F==0x40);}
+  return ((_i2caddr&(~0x3F))==0x40);}
 void ZPCA9685::setHardAddress(uint8_t A543210)
   {
     _i2caddr=0x40 || A543210&0x3F;
@@ -254,7 +257,7 @@ void ZPCA9685::pinMode(uint32_t ulPin, uint8_t mode) {
 	{
 	
 	
-	uint8_t channel=pin2channel( ulPin);
+	//uint8_t channel=pin2channel( ulPin);
 	uint8_t tmp=read8( ZPCA9685_MODE2);
 	tmp&=~7;
 	#ifdef OUTPUT_LOW
@@ -292,7 +295,7 @@ void ZPCA9685::analogWriteResolution(int res)
 		
 	 uint8_t channel=pin2channel(ulPin);
 	  ulValue = mapResolution(ulValue, _writeResolution, 12);
-	  if ((channel < 0 || channel > 15)&& (channel!=(uint8_t)-1)) return;
+	  if (( (channel > 15))&& (channel!=(uint8_t)-1)) return;//(channel < 0) ||
 	 setPin( channel,  ulValue, false );
 	}
 	else if (_next)
@@ -304,6 +307,9 @@ void ZPCA9685::analogWriteResolution(int res)
  {
 	 if((pin>>16)==_i2caddr)
 	 return pin &0xff;
+ 	 if((pin<16))
+	 return pin &0xf;
+ 
  return NO_CHANNEL;
  }
  uint32_t ZPCA9685::analogRead( uint32_t pin )
@@ -316,12 +322,12 @@ void ZPCA9685::digitalWrite(uint32_t ulPin, uint8_t d)
 	{
           uint8_t channel=pin2channel( ulPin);
           if(d==HIGH)
-          {   if ((channel < 0 || channel > 15)&& (channel!=(uint8_t)-1)) return;
+          {   if (( channel > 15)&& (channel!=(uint8_t)-1)) return;//channel < 0 ||
   setPWM( channel,  ZPCA9685_PWM_FULL,  0);
           }
           if (d==LOW)
           {
-                      if ((channel < 0 || channel > 15)&& (channel!=(uint8_t)-1)) return;
+                      if (( channel > 15)&& (channel!=(uint8_t)-1)) return;//channel < 0 ||
   setPWM( channel, 0, ZPCA9685_PWM_FULL);
 
           }
@@ -413,6 +419,115 @@ void ZPCA9685::write8(uint8_t addr, uint8_t d) {
   _i2c->endTransmission();
 }
 
+
+/*************************************************************************************/
+ 
+#define SEROFREQ 50 //Hz
+#define usToTicks(_us)    (((_us) *4096L)/(1000000L/SEROFREQ))                 // converts microseconds to tick
+#define ticksToUs(_ticks) (  ((_ticks) *(1000000L/SEROFREQ))/4096L)   // converts from ticks back to microseconds
+#define TRIM_DURATION  0                                   // compensation ticks to trim adjust for digitalWrite delays
+#define MIN_PULSE_WIDTH       554     // the shortest pulse sent to a servo  
+#define MAX_PULSE_WIDTH      2500     // the longest pulse sent to a servo 
+
+uint8_t ZPCA9685::attach(int pin)
+{
+  return attach(pin, MIN_PULSE_WIDTH, MAX_PULSE_WIDTH);
+}
+/** attach a pin for servo motor
+min : minimal us pulse, max max us pulse;
+*/
+  uint8_t ZPCA9685::attach(int ulPin, int min, int max) // as above but also sets min and max values for writes. 
+  {  	
+  if (!(acceptlocal( ulPin)|| ulPin<16))
+	  return -1;
+  uint8_t channel=pin2channel(ulPin);
+   pinMode(channel, OUTPUT);
+  setPWMFreq(SEROFREQ);  // freq must be setup
+  //servos|=1<<channel;
+  servo_min[channel]=min;
+  servo_max[channel]=max;
+	//   nh->subscribe(*subscriber);
+	   return ulPin;
+
+  }  
+  void ZPCA9685::detach(int pin)
+  {
+	   uint8_t channel=pin2channel(pin);
+	 pinMode(pin, INPUT_PULLUP);
+	// servos&=~(1<<(pin&0xF));
+	servo_max[channel] =0;
+  //    subscriber->shutdown();
+  }  
+  
+  void ZPCA9685::write(int pin,int value)             // if value is < 200 its treated as an angle, otherwise as pulse width in microseconds 
+  {
+  uint8_t channel=pin2channel(pin);
+	   // treat values less than 544 as angles in degrees (valid values in microseconds are handled as microseconds)
+  if (value < MIN_PULSE_WIDTH)
+  {
+    if (value < 0)
+      value = 0;
+    else if (value > 180)
+      value = 180;
+
+    value = map(value, 0, 180, (servo_min[channel] ), ( servo_max[channel] ));
+  }
+  writeMicroseconds(pin,value);
+  
+  }  
+  
+  void ZPCA9685::writeMicroseconds(int ulPin,int value) // Write pulse width in microseconds 
+  {
+	  if (!(acceptlocal( ulPin)|| ulPin<16))
+	  return;
+  
+  // calculate and store the values for the given channel
+  uint8_t channel=pin2channel(ulPin);
+  
+  {
+    if (value < (servo_min[channel] ))          // ensure pulse width is valid
+      value = (servo_min[channel] );
+    else if (value > ( servo_max[channel] ))
+      value = ( servo_max[channel] );
+
+    value = value - TRIM_DURATION;
+    value = usToTicks(value);  // convert to ticks after compensating for interrupt overhead
+    //servos[channel].ticks = value;
+	setPin( channel, value, false);
+	 
+  }
+  
+  }  
+  
+  int ZPCA9685::read(int ulPin)                        // returns current pulse width as an angle between 0 and 180 degrees
+  {
+	  if (!(acceptlocal( ulPin)|| ulPin<16))
+	  return -1;
+  uint8_t channel=pin2channel(ulPin);
+	 return map(readMicroseconds(ulPin)+1, (servo_min[channel] ), ( servo_max[channel] ), 0, 180);
+  }  
+  
+
+  int ZPCA9685::readMicroseconds(int ulPin)            // returns current pulse width in microseconds for this servo (was read_us() in first release)
+  {
+	  unsigned int pulsewidth;
+  if (attached(ulPin))
+    pulsewidth = ticksToUs(0/*readpwm servos[this->servoIndex].ticks*/)  + TRIM_DURATION;
+  else
+    pulsewidth  = 0;
+
+  return pulsewidth;
+  
+  }  
+   // return true if this servo is attached, otherwise false 
+  bool ZPCA9685::attached(int ulPin)
+  {
+	  uint8_t channel=pin2channel(ulPin);
+	 // return (servos&(1<<(channel)))!=0;  
+	 
+	// servos&=~(1<<(pin&0xF));
+	return ( servo_max[channel] )==0;
+  }
 
 /*
 
@@ -508,3 +623,5 @@ uint16_t ZPCA9685_ServoEvaluator::pwmForAngle(float angle) {
     return (uint16_t)constrain((int)roundf(retVal), 0, ZPCA9685_PWM_FULL);
 };
 */
+
+

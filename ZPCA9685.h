@@ -86,7 +86,39 @@ void setHardAddress(uint8_t A543210);
 //  protected:
        bool acceptlocal(uint32_t p);
   //     friend Zmotor2;
+  
+  
+  
+  
+  
+
+uint8_t attach(int pin);
+/** attach a pin for servo motor
+min : minimal us pulse, max max us pulse;
+*/
+  uint8_t attach(int pin, int min, int max) ;
+  void detach(int pin);
+  
+  void write(int pin,int value);
+  void writeMicroseconds(int ulPin,int value);
+  
+  int read(int ulPin); 
+  
+
+  int readMicroseconds(int ulPin)  ;
+   // return true if this servo is attached, otherwise false 
+  bool attached(int ulPin);
+  
  private: 
+ 
+ 
+//uint16_t servos=0;
+uint16_t servo_min[16];
+uint16_t servo_max[16];
+
+
+
+
   int _writeResolution;
   //uint8_t _i2caddr;
    uint8_t pin2channel(uint32_t pin);
