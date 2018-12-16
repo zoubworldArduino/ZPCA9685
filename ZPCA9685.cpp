@@ -162,7 +162,7 @@ ZPCA9685::ZPCA9685() : PinExtender()
 
   void ZPCA9685::begin(void)
   {
-	  begin( 0x40);
+	  begin( PCA9685_ADDR_BASE);
   }
   
 
