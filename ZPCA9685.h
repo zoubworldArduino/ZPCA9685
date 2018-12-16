@@ -55,6 +55,8 @@ class ZPCA9685 : public PinExtender  {
   void begin(void);
   void SWRST (void);
 bool check();
+bool test();
+  
 void setHardAddress(uint8_t A543210);
   void pinMode(uint32_t p, uint8_t d);
   void digitalWrite(uint32_t p, uint8_t d);

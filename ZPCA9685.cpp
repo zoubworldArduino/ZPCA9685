@@ -21,6 +21,7 @@
 #include "ZPCA9685.h"
 
 #include <Wire.h>
+#include <WireUtility.h>
 
 #include "PinExtender.h"
 
@@ -90,7 +91,9 @@ static inline uint32_t mapResolution(uint32_t value, uint32_t from, uint32_t to)
 }
 bool ZPCA9685::check()
   {
-  return ((_i2caddr&(~0x3F))==0x40);}
+  return ((_i2caddr&(~0x3F))==0x40);
+  }
+
 void ZPCA9685::setHardAddress(uint8_t A543210)
   {
     _i2caddr=0x40 || A543210&0x3F;
@@ -123,8 +126,24 @@ ZPCA9685::ZPCA9685() : PinExtender()
    _i2c->begin();
   reset();
   // set a default frequency
-  setPWMFreq(1526);
+  setPWMFreq(50);// to be compliante with servo
+
 }
+  bool ZPCA9685::test()
+  {
+    bool b=_i2c->testLine();
+    b&=check();
+    b&=WireTest( *_i2c, _i2caddr);
+
+
+    uint8_t d=read8( ZPCA9685_MODE2_REG);
+    write8(ZPCA9685_MODE2_REG,d |0xE0);
+    b&=d==read8( ZPCA9685_MODE2_REG);
+    write8(ZPCA9685_MODE2_REG,~d );
+    b&=(~d&0x1F)==read8( ZPCA9685_MODE2_REG);
+    write8(ZPCA9685_MODE2_REG,d |0xE0);
+  return b;
+  }
 /**************************************************************************/
 /*! 
     @brief  Setups the I2C interface and hardware
