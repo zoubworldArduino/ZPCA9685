@@ -220,12 +220,15 @@ void ZPCA9685::setPWMFreq(float freq) {
   Serial.println(freq);
 #endif
 
-  freq *= 0.9;  // Correct for overshoot in the frequency setting (see issue #11).
-  float prescaleval = 25000000;
+  //freq *= 1.05;  // Correct for overshoot in the frequency setting (see issue #11).
+  float prescaleval = 25000000;// there is no spec on this oscillator but we can assume +/-10%
+   prescaleval = 24006000;// on my part F=240006000 Hz
+  
   prescaleval /= 4096;
   prescaleval /= freq;
   prescaleval -= 1;
-
+if(prescaleval<0)
+prescaleval=0;
 #ifdef ENABLE_DEBUG_OUTPUT
   Serial.print("Estimated pre-scale: "); Serial.println(prescaleval);
 #endif
@@ -307,7 +310,7 @@ void ZPCA9685::analogWriteResolution(int res)
   if (_next)
 		return _next->analogWriteResolution( res);		
 }
- void ZPCA9685::analogWrite( uint32_t ulPin, uint32_t ulValue ) 
+ void ZPCA9685::analogWrite( uint32_t ulPin, uint32_t ulValue, bool inverted ) 
  {
 	 if(acceptlocal( ulPin))
 	{
@@ -315,7 +318,7 @@ void ZPCA9685::analogWriteResolution(int res)
 	 uint8_t channel=pin2channel(ulPin);
 	  ulValue = mapResolution(ulValue, _writeResolution, 12);
 	  if (( (channel > 15))&& (channel!=(uint8_t)-1)) return;//(channel < 0) ||
-	 setPin( channel,  ulValue, false );
+	 setPin( channel,  ulValue, inverted );
 	}
 	else if (_next)
 		return _next->analogWrite( ulPin,ulValue);		
@@ -402,7 +405,7 @@ void ZPCA9685::setPin(uint8_t num, uint16_t val, bool invert)
       setPWM(num, 0, 4096);
     }
     else {
-      setPWM(num, 0, 4095-val);
+      setPWM(num, val, 4095);
     }
   }
   else {

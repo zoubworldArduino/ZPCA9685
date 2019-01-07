@@ -1,3 +1,4 @@
+/**/
 /*************************************************** 
   This is a library for our Adafruit 16-channel PWM & Servo driver
 
@@ -18,7 +19,12 @@
 #ifndef _PCA9685_H
 #define _PCA9685_H
 
-
+/** @name I2C base address
+*/
+//@{
+#define PCA9685_ADDR_BASE 0x40
+//@}  
+   
 #include "PinExtender.h"
    
 
@@ -53,6 +59,7 @@ class ZPCA9685 : public PinExtender  {
 
    /** @name the Arduino like API
 */
+//@{
   void pinMode(uint32_t p, uint8_t d);
   void digitalWrite(uint32_t p, uint8_t d);
   uint8_t digitalRead(uint32_t p);
@@ -62,7 +69,7 @@ class ZPCA9685 : public PinExtender  {
  * \param ulPin
  * \param ulValue
  */
- void analogWrite( uint32_t ulPin, uint32_t ulValue ) ;
+ void analogWrite( uint32_t ulPin, uint32_t ulValue, bool inverted=false ) ;
 /*
  * \brief Set the resolution of analogWrite parameters. Default is 8 bits (range from 0 to 255).
  *
