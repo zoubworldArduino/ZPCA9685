@@ -448,12 +448,10 @@ void ZPCA9685::write8(uint8_t addr, uint8_t d) {
 #define usToTicks(_us)    (((_us) *4096L)/(1000000L/SEROFREQ))                 // converts microseconds to tick
 #define ticksToUs(_ticks) (  ((_ticks) *(1000000L/SEROFREQ))/4096L)   // converts from ticks back to microseconds
 #define TRIM_DURATION  0                                   // compensation ticks to trim adjust for digitalWrite delays
-#define MIN_PULSE_WIDTH       554     // the shortest pulse sent to a servo  
-#define MAX_PULSE_WIDTH      2500     // the longest pulse sent to a servo 
 
 uint8_t ZPCA9685::attach(int pin)
 {
-  return attach(pin, MIN_PULSE_WIDTH, MAX_PULSE_WIDTH);
+  return attach(pin, SERVO_MIN_PULSE_WIDTH, SERVO_MAX_PULSE_WIDTH);
 }
 /** attach a pin for servo motor
 min : minimal us pulse, max max us pulse;
@@ -466,12 +464,17 @@ min : minimal us pulse, max max us pulse;
    pinMode(channel, OUTPUT);
   setPWMFreq(SEROFREQ);  // freq must be setup
   //servos|=1<<channel;
-  servo_min[channel]=min;
-  servo_max[channel]=max;
+setPulseRange( ulPin,  min,  max);
 	//   nh->subscribe(*subscriber);
 	   return ulPin;
 
   }  
+   void ZPCA9685::setPulseRange(int ulPin, int min, int max) // as above but also sets min and max values for writes. 
+   {
+     uint8_t channel=pin2channel(ulPin);
+    servo_min[channel]=min;
+  servo_max[channel]=max;
+   }
   void ZPCA9685::detach(int pin)
   {
 	   uint8_t channel=pin2channel(pin);
@@ -485,12 +488,12 @@ min : minimal us pulse, max max us pulse;
   {
   uint8_t channel=pin2channel(pin);
 	   // treat values less than 544 as angles in degrees (valid values in microseconds are handled as microseconds)
-  if (value < MIN_PULSE_WIDTH)
+  if (value <  SERVO_MIN_PULSE_WIDTH)
   {
     if (value < 0)
       value = 0;
-    else if (value > 180)
-      value = 180;
+    else if (value > 360)
+      value = 360;
 
     value = map(value, 0, 180, (servo_min[channel] ), ( servo_max[channel] ));
   }

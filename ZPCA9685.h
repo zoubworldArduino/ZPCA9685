@@ -47,6 +47,8 @@
 #define  PCA9685_LED1 1
 #define  PCA9685_LED0 0
 
+#define SERVO_MIN_PULSE_WIDTH       530     // the shortest pulse sent to a servo  
+#define SERVO_MAX_PULSE_WIDTH      2900     // the longest pulse sent to a servo 
 
 /**************************************************************************/
 /*! 
@@ -103,9 +105,9 @@ class ZPCA9685 : public PinExtender  {
   */
   void begin(void);
   /** Reset the board like a power up.
+    */
+  void setPulseRange(int ulPin, int min, int max); // as above but also sets min and max values for writes. 
   
-  
-  */
   void SWRST (void);
    /**  check the board
   @deprecated
